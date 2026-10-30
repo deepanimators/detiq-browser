@@ -25,7 +25,10 @@ interface Window {
       removeListeners: () => void
     }
     browser: {
-      navigate: (tabId: string, url: string) => Promise<unknown>
+      navigate: (tabId: string, url: string) => Promise<{ ok: boolean }>
+      back: (tabId: string) => Promise<{ ok: boolean }>
+      forward: (tabId: string) => Promise<{ ok: boolean }>
+      refresh: (tabId: string) => Promise<{ ok: boolean }>
       getState: (tabId: string) => Promise<unknown>
       screenshot: (tabId: string) => Promise<string>
       registerTab: (tabId: string, wcId: number) => Promise<{ ok: boolean }>

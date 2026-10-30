@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import LeftNav from './LeftNav'
-import TabBar from '../browser/TabBar'
 import AddressBar from '../browser/AddressBar'
 import WebViewArea from '../browser/WebViewArea'
 import CompanionSidebar from '../companion/CompanionSidebar'
@@ -128,16 +127,6 @@ export default function BrowserLayout() {
     setSidebarOpen(false)
   }
 
-  function switchToBrowser() {
-    if (tabs.length === 0) {
-      const tab = makeTab()
-      setTabs([tab])
-      setActiveTabId(tab.id)
-      setAddressValue('')
-    }
-    setMode('browser')
-  }
-
   function browseWithCompanion(url: string) {
     navigate(url)
     setMode('browser')
@@ -165,39 +154,39 @@ export default function BrowserLayout() {
   const isHome = mode === 'home'
   const isCompanion = mode.startsWith('companion:')
 
+
   return (
     <div className="flex h-screen bg-[#0a0a0a] overflow-hidden">
-      {/* Left nav — thin icon dock */}
-      <LeftNav mode={mode} onHome={goHome} onNewTab={switchToBrowser} />
+      {/* Arc-style sidebar — holds tabs + companions, provides traffic light clearance */}
+      <LeftNav
+        mode={mode}
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onTabSelect={selectTab}
+        onTabClose={closeTab}
+        onNewTab={() => addTab()}
+        onHome={goHome}
+        companions={companions}
+        onOpenCompanion={openCompanion}
+      />
 
-      {/* Main area */}
+      {/* Main area — traffic lights live in sidebar column, no spacer needed here */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* macOS traffic light spacer — always present so content isn't under buttons */}
-        <div className="h-10 shrink-0 drag" />
 
         {/* Browser chrome — only in browser mode */}
         {isBrowser && (
-          <>
-            <TabBar
-              tabs={tabs}
-              activeTabId={activeTabId}
-              onTabSelect={selectTab}
-              onTabClose={closeTab}
-              onNewTab={() => addTab()}
-            />
-            <AddressBar
+          <AddressBar
               value={addressValue}
               onChange={setAddressValue}
               onNavigate={navigate}
-              onBack={() => {}}
-              onForward={() => {}}
-              onRefresh={() => {}}
               onToggleSidebar={() => setSidebarOpen((v) => !v)}
               sidebarOpen={sidebarOpen}
               companionName={sidebarCompanion?.name?.split(' ')[1] ?? 'AI'}
               companionColor={sidebarCompanion?.color}
+              onBack={() => window.api?.browser.back(activeTabId)}
+              onForward={() => window.api?.browser.forward(activeTabId)}
+              onRefresh={() => window.api?.browser.refresh(activeTabId)}
             />
-          </>
         )}
 
         {/* Content row */}

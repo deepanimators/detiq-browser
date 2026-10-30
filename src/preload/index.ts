@@ -21,6 +21,9 @@ const api = {
   },
   browser: {
     navigate: (tabId: string, url: string) => ipcRenderer.invoke('browser:navigate', tabId, url),
+    back: (tabId: string) => ipcRenderer.invoke('browser:back', tabId),
+    forward: (tabId: string) => ipcRenderer.invoke('browser:forward', tabId),
+    refresh: (tabId: string) => ipcRenderer.invoke('browser:refresh', tabId),
     getState: (tabId: string) => ipcRenderer.invoke('browser:getState', tabId),
     screenshot: (tabId: string) => ipcRenderer.invoke('browser:screenshot', tabId),
     registerTab: (tabId: string, wcId: number) => ipcRenderer.invoke('browser:registerTab', tabId, wcId),

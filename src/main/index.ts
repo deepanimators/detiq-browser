@@ -5,6 +5,7 @@ config({ path: join(__dirname, '../../.env') })
 import { app, BrowserWindow, shell } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupIpcHandlers } from './ipc/handlers'
+import { startRoutineScheduler, stopAllRoutines } from './routines/scheduler'
 
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
@@ -49,6 +50,7 @@ app.whenReady().then(() => {
   })
 
   setupIpcHandlers()
+  startRoutineScheduler()
   createWindow()
 
   app.on('activate', () => {
@@ -57,5 +59,10 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  stopAllRoutines()
   if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('before-quit', () => {
+  stopAllRoutines()
 })

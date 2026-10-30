@@ -31,6 +31,10 @@ function getWebContents(tabId: string): WebContents | null {
   return webContents.fromId(id) ?? null
 }
 
+export function getWebContentsById(tabId: string): WebContents | null {
+  return getWebContents(tabId)
+}
+
 export async function capturePageState(tabId: string): Promise<PageState> {
   const wc = getWebContents(tabId)
   if (!wc) {
