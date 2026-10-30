@@ -43,6 +43,7 @@ export default function WebViewArea({
       const url = (e as CustomEvent & { url: string }).url
       onUrlChange(tab.id, url)
       onLoadingChange(tab.id, false)
+      window.api?.browser.navigated?.(tab.id, url)
     })
 
     wv.addEventListener('did-navigate-in-page', (e: Event) => {

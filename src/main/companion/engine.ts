@@ -6,6 +6,9 @@ import { capturePageState, getWebContentsById } from '../browser-control/page-st
 import { executeAction } from '../browser-control/actions'
 import { COMPANION_SYSTEM_PROMPT } from './prompts'
 import { getCompanionProfile } from './profiles'
+import { getSkillsForTask } from './skills'
+import { searchMemories, storeMemory } from '../memory/vector-store'
+import { buildMemoryContext } from '../memory/file-memory'
 
 const activeSessions = new Map<string, AbortController>()
 
@@ -34,7 +37,17 @@ export async function runCompanion(
 
   const model = resolveModel(modelId)
   const profile = companionId ? getCompanionProfile(companionId) : null
-  const systemPrompt = profile?.templateInstructions ?? COMPANION_SYSTEM_PROMPT
+
+  // Build system prompt: base + skills + memory context
+  const basePrompt = profile?.templateInstructions ?? COMPANION_SYSTEM_PROMPT
+  const skills = getSkillsForTask(instruction, companionId)
+  const fileMemory = companionId ? await buildMemoryContext(companionId) : ''
+  const vectorMemories = companionId ? await searchMemories(instruction, companionId, 5) : []
+  const vectorMemCtx = vectorMemories.length > 0
+    ? '\n\n## Relevant past memories\n' + vectorMemories.map((m, i) => `${i + 1}. ${m}`).join('\n')
+    : ''
+
+  const systemPrompt = basePrompt + skills + (fileMemory ? '\n\n' + fileMemory : '') + vectorMemCtx
 
   const messages: { role: 'user' | 'assistant'; content: string }[] = []
   const MAX_STEPS = 50
@@ -154,11 +167,12 @@ export async function runCompanion(
 
       const completionTool = result.toolResults?.find((r) => r.toolName === 'task_complete')
       if (completionTool) {
-        return {
-          status: 'success',
-          sessionId,
-          summary: (completionTool.result as { summary: string }).summary
+        const summary = (completionTool.result as { summary: string }).summary
+        // Store task + outcome as a vector memory for future context retrieval
+        if (companionId) {
+          storeMemory(companionId, `Task: ${instruction}\nOutcome: ${summary}`).catch(() => {})
         }
+        return { status: 'success', sessionId, summary }
       }
     }
 

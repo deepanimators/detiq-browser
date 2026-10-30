@@ -27,19 +27,34 @@ const api = {
     getState: (tabId: string) => ipcRenderer.invoke('browser:getState', tabId),
     screenshot: (tabId: string) => ipcRenderer.invoke('browser:screenshot', tabId),
     registerTab: (tabId: string, wcId: number) => ipcRenderer.invoke('browser:registerTab', tabId, wcId),
-    unregisterTab: (tabId: string) => ipcRenderer.invoke('browser:unregisterTab', tabId)
+    unregisterTab: (tabId: string) => ipcRenderer.invoke('browser:unregisterTab', tabId),
+    navigated: (tabId: string, url: string) => ipcRenderer.invoke('browser:navigated', tabId, url)
   },
   memory: {
     read: (companionId: string) => ipcRenderer.invoke('memory:read', companionId),
     write: (companionId: string, content: string) => ipcRenderer.invoke('memory:write', companionId, content),
     readShared: () => ipcRenderer.invoke('memory:readShared'),
-    writeShared: (content: string) => ipcRenderer.invoke('memory:writeShared', content)
+    writeShared: (content: string) => ipcRenderer.invoke('memory:writeShared', content),
+    search: (companionId: string, query: string) => ipcRenderer.invoke('memory:search', companionId, query),
+    store: (companionId: string, content: string) => ipcRenderer.invoke('memory:store', companionId, content),
+    count: (companionId: string) => ipcRenderer.invoke('memory:count', companionId),
+    clear: (companionId: string) => ipcRenderer.invoke('memory:clear', companionId)
   },
   routines: {
     list: () => ipcRenderer.invoke('routines:list'),
     create: (routine: unknown) => ipcRenderer.invoke('routines:create', routine),
     delete: (id: string) => ipcRenderer.invoke('routines:delete', id),
     toggle: (id: string, enabled: boolean) => ipcRenderer.invoke('routines:toggle', id, enabled)
+  },
+  skills: {
+    list: () => ipcRenderer.invoke('skills:list')
+  },
+  automation: {
+    list: () => ipcRenderer.invoke('automation:list'),
+    templates: () => ipcRenderer.invoke('automation:templates'),
+    create: (rule: unknown) => ipcRenderer.invoke('automation:create', rule),
+    delete: (id: string) => ipcRenderer.invoke('automation:delete', id),
+    toggle: (id: string, enabled: boolean) => ipcRenderer.invoke('automation:toggle', id, enabled)
   }
 }
 

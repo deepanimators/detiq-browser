@@ -1,9 +1,12 @@
-import { ipcMain, webContents } from 'electron'
+import { ipcMain } from 'electron'
 import { runCompanion, stopCompanion } from '../companion/engine'
 import { listCompanionProfiles, getCompanionProfile } from '../companion/profiles'
 import { readCompanionMemory, writeCompanionMemory, readSharedMemory, writeSharedMemory } from '../memory/file-memory'
 import { registerTab, unregisterTab, capturePageState } from '../browser-control/page-state'
 import { scheduleRoutine, stopRoutine } from '../routines/scheduler'
+import { listRules, createRule, deleteRule, toggleRule, AUTOMATION_TEMPLATES } from '../automation/trigger-engine'
+import { listSkills } from '../companion/skills'
+import { searchMemories, storeMemory, getMemoryCount, clearMemory } from '../memory/vector-store'
 
 export function setupIpcHandlers(): void {
   // ── Companion ──────────────────────────────────────────────────────────────
@@ -113,6 +116,38 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle('browser:getState', async (_, tabId: string) => {
     return capturePageState(tabId)
+  })
+
+  // ── Skills ────────────────────────────────────────────────────────────────
+  ipcMain.handle('skills:list', async () => listSkills())
+
+  // ── Vector memory ─────────────────────────────────────────────────────────
+  ipcMain.handle('memory:search', async (_, companionId: string, query: string) => searchMemories(query, companionId))
+  ipcMain.handle('memory:store', async (_, companionId: string, content: string) => storeMemory(companionId, content))
+  ipcMain.handle('memory:count', async (_, companionId: string) => getMemoryCount(companionId))
+  ipcMain.handle('memory:clear', async (_, companionId: string) => clearMemory(companionId))
+
+  // ── Automation rules ──────────────────────────────────────────────────────
+  ipcMain.handle('automation:list', async () => listRules())
+  ipcMain.handle('automation:templates', async () => AUTOMATION_TEMPLATES)
+  ipcMain.handle('automation:create', async (_, rule) => createRule(rule))
+  ipcMain.handle('automation:delete', async (_, id: string) => deleteRule(id))
+  ipcMain.handle('automation:toggle', async (_, id: string, enabled: boolean) => toggleRule(id, enabled))
+
+  // ── Automation: URL navigation trigger ───────────────────────────────────
+  ipcMain.handle('browser:navigated', async (event, tabId: string, url: string) => {
+    const { getMatchingUrlRules, recordRuleExecution } = await import('../automation/trigger-engine')
+    const matches = getMatchingUrlRules(url)
+    for (const rule of matches) {
+      const sessionId = crypto.randomUUID()
+      recordRuleExecution(rule.id)
+      runCompanion(sessionId, rule.instruction, tabId, (action) => {
+        event.sender.send('companion:action', action)
+      }, rule.companion_id)
+        .then((result) => event.sender.send('companion:complete', result))
+        .catch(() => {})
+    }
+    return { triggered: matches.length }
   })
 
   ipcMain.handle('browser:screenshot', async (_, tabId: string) => {
