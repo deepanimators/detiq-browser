@@ -5,6 +5,7 @@ import WebViewArea from '../browser/WebViewArea'
 import CompanionSidebar from '../companion/CompanionSidebar'
 import CompanionWorkspace from '../companion/CompanionWorkspace'
 import HomePage from '../home/HomePage'
+import CommandPalette from '../ui/CommandPalette'
 
 export interface Tab {
   id: string
@@ -37,6 +38,18 @@ export default function BrowserLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [companions, setCompanions] = useState<CompanionProfile[]>([])
   const [activeSidebarCompanionId, setActiveSidebarCompanionId] = useState('sales-sam')
+  const [cmdOpen, setCmdOpen] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setCmdOpen((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   useEffect(() => {
     window.api?.companion.list().then((list) => {
@@ -241,6 +254,18 @@ export default function BrowserLayout() {
           )}
         </div>
       </div>
+
+      {/* ⌘K Command palette — fixed overlay, inside root div */}
+      {cmdOpen && (
+        <CommandPalette
+          companions={companions}
+          tabs={tabs}
+          onNavigate={navigate}
+          onOpenCompanion={openCompanion}
+          onSelectTab={selectTab}
+          onClose={() => setCmdOpen(false)}
+        />
+      )}
     </div>
   )
 }

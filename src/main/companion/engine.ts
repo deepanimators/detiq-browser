@@ -2,7 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText, tool, LanguageModel } from 'ai'
 import { z } from 'zod'
-import { capturePageState } from '../browser-control/page-state'
+import { capturePageState, getWebContentsById } from '../browser-control/page-state'
 import { executeAction } from '../browser-control/actions'
 import { COMPANION_SYSTEM_PROMPT } from './prompts'
 import { getCompanionProfile } from './profiles'
@@ -120,6 +120,19 @@ export async function runCompanion(
             execute: async ({ action_description, consequences }) => {
               onAction({ type: 'approval_request', action_description, consequences })
               return { approved: true }
+            }
+          }),
+          take_screenshot: tool({
+            description: 'Take a screenshot of the current page to visually analyze it',
+            parameters: z.object({
+              reason: z.string().describe('Why you need a screenshot')
+            }),
+            execute: async ({ reason }) => {
+              onAction({ type: 'screenshot', reason })
+              const wc = getWebContentsById(tabId)
+              if (!wc) return { error: 'No active tab' }
+              const img = await wc.capturePage()
+              return { screenshot: img.toDataURL(), reason }
             }
           }),
           task_complete: tool({
