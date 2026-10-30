@@ -1,0 +1,88 @@
+{
+  "name": "detiq-browser",
+  "version": "0.1.0",
+  "description": "AI-powered browser with companion agents",
+  "main": "./out/main/index.js",
+  "author": "detiq",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "start": "electron-vite preview",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "package": "electron-vite build && electron-builder",
+    "make:mac": "electron-vite build && electron-builder --mac"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.92",
+    "@ai-sdk/openai": "^4.0.105",
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^3.0.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "ai": "^7.0.83",
+    "async-mutex": "^0.5.0",
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^18.0.9",
+    "drizzle-orm": "^1.0.0-rc.4",
+    "electron-chrome-web-store": "npm:@iamevan/electron-chrome-web-store@0.13.5",
+    "electron-updater": "^6.8.9",
+    "node-cron": "^3.0.3",
+    "sqlite-vec": "^0.1.9",
+    "tiktoken": "^1.0.22",
+    "uuid": "^11.1.1",
+    "valibot": "^1.4.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@electron-toolkit/eslint-config-prettier": "^2.0.0",
+    "@electron-toolkit/eslint-config-ts": "^2.0.0",
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.13.10",
+    "@types/node-cron": "^3.0.11",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^35.1.5",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^3.0.0",
+    "eslint": "^9.21.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.1"
+  },
+  "build": {
+    "appId": "com.detiq.browser",
+    "productName": "detiq",
+    "directories": {
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
+  }
+}
