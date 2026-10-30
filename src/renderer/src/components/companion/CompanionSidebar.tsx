@@ -137,10 +137,13 @@ export default function CompanionSidebar({ tabId, companionId, onCompanionChange
         >
           {selected && (
             <div
-              className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0"
-              style={{ backgroundColor: selected.color }}
+              className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${selected.color} 0%, ${selected.color}bb 100%)`,
+                boxShadow: `0 2px 6px ${selected.color}50`,
+              }}
             >
-              {selected.name.charAt(0)}
+              {selected.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
             </div>
           )}
           <span className="text-sm font-medium text-gray-200 truncate">{selected?.name ?? 'Companion'}</span>
@@ -168,10 +171,10 @@ export default function CompanionSidebar({ tabId, companionId, onCompanionChange
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-[#1a1a1a] transition-colors text-left ${c.id === companionId ? 'bg-[#1a1a1a]' : ''}`}
             >
               <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0"
-                style={{ backgroundColor: c.color }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                style={{ background: `linear-gradient(135deg, ${c.color} 0%, ${c.color}bb 100%)` }}
               >
-                {c.name.charAt(0)}
+                {c.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-medium text-gray-200">{c.name}</div>
@@ -221,10 +224,10 @@ export default function CompanionSidebar({ tabId, companionId, onCompanionChange
               <div className="flex items-start gap-2">
                 {selected && (
                   <div
-                    className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
-                    style={{ backgroundColor: selected.color }}
+                    className="w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-bold text-white shrink-0 mt-0.5"
+                    style={{ background: `linear-gradient(135deg, ${selected.color} 0%, ${selected.color}bb 100%)` }}
                   >
-                    {selected.name.charAt(0)}
+                    {selected.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
                   </div>
                 )}
                 <div className="bg-[#1a1a1a] rounded-xl rounded-tl-sm px-3 py-2 text-xs text-gray-300 leading-relaxed max-w-[88%] whitespace-pre-wrap">

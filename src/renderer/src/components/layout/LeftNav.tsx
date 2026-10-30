@@ -34,22 +34,19 @@ export default function LeftNav({
         {/* Home */}
         <NavRow label="Home" active={isHome} onClick={onHome} icon={<HomeIcon />} />
 
-        {/* Tabs */}
+        {/* Tabs — no section label, context is obvious */}
         {tabs.length > 0 && (
-          <>
-            <SectionLabel label="Tabs" />
-            <div className="flex flex-col gap-0.5 overflow-y-auto" style={{ maxHeight: '40vh' }}>
-              {tabs.map((tab) => (
-                <TabRow
-                  key={tab.id}
-                  tab={tab}
-                  active={tab.id === activeTabId && isBrowser}
-                  onSelect={() => onTabSelect(tab.id)}
-                  onClose={() => onTabClose(tab.id)}
-                />
-              ))}
-            </div>
-          </>
+          <div className="flex flex-col gap-0.5 mt-1 overflow-y-auto" style={{ maxHeight: '38vh' }}>
+            {tabs.map((tab) => (
+              <TabRow
+                key={tab.id}
+                tab={tab}
+                active={tab.id === activeTabId && isBrowser}
+                onSelect={() => onTabSelect(tab.id)}
+                onClose={() => onTabClose(tab.id)}
+              />
+            ))}
+          </div>
         )}
 
         <button
@@ -65,31 +62,41 @@ export default function LeftNav({
         {/* Companions */}
         {companions.length > 0 && (
           <>
-            <SectionLabel label="Companions" />
+            <p className="text-[9px] text-gray-700 uppercase tracking-[0.12em] px-2 pt-3 pb-1">Companions</p>
             <div className="flex flex-col gap-0.5 mb-2">
-              {companions.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => onOpenCompanion(c.id)}
-                  className={`flex items-center gap-2 h-7 px-2 rounded-lg text-[11px] transition-all w-full text-left ${
-                    activeCompanionId === c.id
-                      ? 'text-white'
-                      : 'text-gray-600 hover:text-gray-300 hover:bg-[#111]'
-                  }`}
-                  style={activeCompanionId === c.id ? { backgroundColor: `${c.color}20` } : {}}
-                >
-                  <div
-                    className="w-4 h-4 rounded-full shrink-0 flex items-center justify-center text-[7px] font-bold text-white"
-                    style={{ backgroundColor: c.color }}
+              {companions.map((c) => {
+                const initials = c.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2)
+                const active = activeCompanionId === c.id
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => onOpenCompanion(c.id)}
+                    className="flex items-center gap-2 h-8 px-2 rounded-lg text-[11px] transition-all w-full text-left"
+                    style={{
+                      backgroundColor: active ? `${c.color}18` : 'transparent',
+                      color: active ? '#f3f4f6' : '#6b7280',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#111111'
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
+                    }}
                   >
-                    {c.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2)}
-                  </div>
-                  <span className="truncate">{c.name}</span>
-                  {activeCompanionId === c.id && (
-                    <div className="w-1 h-1 rounded-full ml-auto shrink-0" style={{ backgroundColor: c.color }} />
-                  )}
-                </button>
-              ))}
+                    <div
+                      className="w-5 h-5 rounded-lg shrink-0 flex items-center justify-center text-[8px] font-bold text-white"
+                      style={{
+                        background: `linear-gradient(135deg, ${c.color} 0%, ${c.color}bb 100%)`,
+                        boxShadow: active ? `0 2px 8px ${c.color}40` : 'none',
+                      }}
+                    >
+                      {initials}
+                    </div>
+                    <span className="truncate flex-1">{c.name}</span>
+                    {active && <div className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: c.color }} />}
+                  </button>
+                )
+              })}
             </div>
           </>
         )}
