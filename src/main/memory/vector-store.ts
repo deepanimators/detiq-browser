@@ -1,4 +1,4 @@
-import { getDb } from '../storage/db'
+import { getDb, isVecLoaded } from '../storage/db'
 import { generateEmbedding, embeddingToBlob } from './embeddings'
 import { randomUUID } from 'crypto'
 
@@ -28,7 +28,7 @@ export async function searchMemories(query: string, companionId: string, topK = 
 
   const embedding = await generateEmbedding(query)
 
-  if (embedding) {
+  if (embedding && isVecLoaded()) {
     const blob = embeddingToBlob(embedding)
     try {
       // KNN search via sqlite-vec MATCH operator

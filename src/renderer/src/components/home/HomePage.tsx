@@ -37,6 +37,10 @@ export default function HomePage({ onOpenCompanion, onBrowse }: Props) {
 
   useEffect(() => {
     window.api?.companion.list().then(setCompanions).catch(() => {})
+  }, [])
+
+  // ⌘K focuses search on home page (BrowserLayout's ⌘K skips home mode)
+  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()

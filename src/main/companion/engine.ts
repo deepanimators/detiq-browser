@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
-import { generateText, tool, LanguageModel } from 'ai'
+import { generateText, tool, stepCountIs, LanguageModel } from 'ai'
 import { z } from 'zod'
 import { capturePageState, getWebContentsById } from '../browser-control/page-state'
 import { executeAction } from '../browser-control/actions'
@@ -11,6 +11,7 @@ import { searchMemories, storeMemory } from '../memory/vector-store'
 import { buildMemoryContext } from '../memory/file-memory'
 
 const activeSessions = new Map<string, AbortController>()
+const MAX_CONCURRENT_SESSIONS = 20
 
 function resolveModel(modelId?: string): LanguageModel {
   const id = modelId ?? process.env['DETIQ_MODEL'] ?? 'claude-sonnet-4-6'
@@ -32,6 +33,12 @@ export async function runCompanion(
   companionId?: string,
   modelId?: string
 ): Promise<CompanionResult> {
+  // Evict oldest session if at cap to prevent unbounded growth
+  if (activeSessions.size >= MAX_CONCURRENT_SESSIONS) {
+    const oldest = activeSessions.keys().next().value!
+    activeSessions.get(oldest)?.abort()
+    activeSessions.delete(oldest)
+  }
   const controller = new AbortController()
   activeSessions.set(sessionId, controller)
 
@@ -74,7 +81,7 @@ export async function runCompanion(
         tools: {
           navigate: tool({
             description: 'Navigate to a URL',
-            parameters: z.object({ url: z.string().url() }),
+            inputSchema: z.object({ url: z.string().url() }),
             execute: async ({ url }) => {
               onAction({ type: 'navigate', url })
               return executeAction(tabId, { type: 'navigate', url })
@@ -82,7 +89,7 @@ export async function runCompanion(
           }),
           click: tool({
             description: 'Click an element on the page',
-            parameters: z.object({
+            inputSchema: z.object({
               selector: z.string().describe('CSS selector or description of element'),
               description: z.string().describe('Human-readable description of what you are clicking')
             }),
@@ -93,7 +100,7 @@ export async function runCompanion(
           }),
           type: tool({
             description: 'Type text into an input field',
-            parameters: z.object({
+            inputSchema: z.object({
               selector: z.string(),
               text: z.string(),
               description: z.string()
@@ -105,7 +112,7 @@ export async function runCompanion(
           }),
           extract: tool({
             description: 'Extract structured data from the current page',
-            parameters: z.object({
+            inputSchema: z.object({
               instructions: z.string().describe('What data to extract and how to structure it')
             }),
             execute: async ({ instructions }) => {
@@ -115,7 +122,7 @@ export async function runCompanion(
           }),
           scroll: tool({
             description: 'Scroll the page up or down',
-            parameters: z.object({
+            inputSchema: z.object({
               direction: z.enum(['up', 'down']),
               amount: z.number().default(500)
             }),
@@ -126,18 +133,29 @@ export async function runCompanion(
           }),
           request_approval: tool({
             description: 'Request user approval before performing a sensitive action (send email, submit form, delete)',
-            parameters: z.object({
+            inputSchema: z.object({
               action_description: z.string(),
               consequences: z.string()
             }),
             execute: async ({ action_description, consequences }) => {
               onAction({ type: 'approval_request', action_description, consequences })
-              return { approved: true }
+              const { dialog } = await import('electron')
+              const result = await dialog.showMessageBox({
+                type: 'question',
+                buttons: ['Approve', 'Deny'],
+                defaultId: 0,
+                cancelId: 1,
+                title: 'Companion Action Approval',
+                message: action_description,
+                detail: `Consequences: ${consequences}`
+              })
+              const approved = result.response === 0
+              return { approved }
             }
           }),
           take_screenshot: tool({
             description: 'Take a screenshot of the current page to visually analyze it',
-            parameters: z.object({
+            inputSchema: z.object({
               reason: z.string().describe('Why you need a screenshot')
             }),
             execute: async ({ reason }) => {
@@ -150,7 +168,7 @@ export async function runCompanion(
           }),
           task_complete: tool({
             description: 'Signal that the task is complete',
-            parameters: z.object({
+            inputSchema: z.object({
               summary: z.string().describe('Summary of what was accomplished')
             }),
             execute: async ({ summary }) => {
@@ -159,7 +177,7 @@ export async function runCompanion(
             }
           })
         },
-        maxSteps: 1,
+        stopWhen: stepCountIs(1),
         abortSignal: controller.signal
       })
 
@@ -167,7 +185,7 @@ export async function runCompanion(
 
       const completionTool = result.toolResults?.find((r) => r.toolName === 'task_complete')
       if (completionTool) {
-        const summary = (completionTool.result as { summary: string }).summary
+        const summary = (completionTool as { output: { summary: string } }).output.summary
         // Store task + outcome as a vector memory for future context retrieval
         if (companionId) {
           storeMemory(companionId, `Task: ${instruction}\nOutcome: ${summary}`).catch(() => {})

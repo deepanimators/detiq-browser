@@ -22,7 +22,6 @@ export async function executeAction(tabId: string, action: Action): Promise<unkn
   switch (action.type) {
     case 'navigate': {
       await wc.loadURL(action.url)
-      await new Promise((resolve) => wc.once('did-finish-load', resolve))
       return { ok: true, url: wc.getURL() }
     }
 

@@ -175,10 +175,6 @@ function TabRow({
   )
 }
 
-function SectionLabel({ label }: { label: string }) {
-  return <p className="text-[9px] text-gray-700 uppercase tracking-widest px-2 pt-3 pb-1">{label}</p>
-}
-
 function HomeIcon() {
   return (
     <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

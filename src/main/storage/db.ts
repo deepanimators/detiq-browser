@@ -4,6 +4,11 @@ import { join } from 'path'
 import { mkdirSync } from 'fs'
 
 let db: Database.Database | null = null
+let vecLoaded = false
+
+export function isVecLoaded(): boolean {
+  return vecLoaded
+}
 
 export function getDb(): Database.Database {
   if (db) return db
@@ -20,6 +25,7 @@ export function getDb(): Database.Database {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const sqliteVec = require('sqlite-vec')
     sqliteVec.load(db)
+    vecLoaded = true
     console.log('[db] sqlite-vec loaded')
   } catch (e) {
     console.warn('[db] sqlite-vec not available:', e)

@@ -47,6 +47,9 @@ export function setupIpcHandlers(): void {
   })
 
   ipcMain.handle('routines:create', async (_, routine) => {
+    if (!routine || typeof routine !== 'object') return null
+    const { name, instruction, trigger_type } = routine as Record<string, unknown>
+    if (!name || !instruction || !trigger_type) return null
     const { createRoutine } = await import('../routines/store')
     const created = createRoutine(routine)
     if (created.enabled && created.trigger_type === 'schedule') {
@@ -87,6 +90,14 @@ export function setupIpcHandlers(): void {
   })
 
   ipcMain.handle('browser:navigate', async (_, tabId: string, url: string) => {
+    if (typeof url !== 'string') return { ok: false }
+    // Block javascript: and file: schemes to prevent renderer-injected code execution
+    const safe = ['https:', 'http:', 'about:', 'devtools:']
+    try {
+      if (!safe.includes(new URL(url).protocol)) return { ok: false, error: 'Unsafe scheme' }
+    } catch {
+      return { ok: false, error: 'Invalid URL' }
+    }
     const { getWebContentsById } = await import('../browser-control/page-state')
     const wc = getWebContentsById(tabId)
     if (wc) wc.loadURL(url)
@@ -130,7 +141,19 @@ export function setupIpcHandlers(): void {
   // ── Automation rules ──────────────────────────────────────────────────────
   ipcMain.handle('automation:list', async () => listRules())
   ipcMain.handle('automation:templates', async () => AUTOMATION_TEMPLATES)
-  ipcMain.handle('automation:create', async (_, rule) => createRule(rule))
+  ipcMain.handle('automation:create', async (_, rule) => {
+    if (!rule || typeof rule !== 'object') return null
+    const validTypes = ['url_match', 'schedule', 'page_content']
+    const { name, trigger_type, trigger_pattern, companion_id, instruction } = rule as Record<string, unknown>
+    if (
+      typeof name !== 'string' || !name.trim() ||
+      typeof trigger_type !== 'string' || !validTypes.includes(trigger_type) ||
+      typeof trigger_pattern !== 'string' || !trigger_pattern.trim() ||
+      typeof companion_id !== 'string' || !companion_id.trim() ||
+      typeof instruction !== 'string' || !instruction.trim()
+    ) return null
+    return createRule(rule)
+  })
   ipcMain.handle('automation:delete', async (_, id: string) => deleteRule(id))
   ipcMain.handle('automation:toggle', async (_, id: string, enabled: boolean) => toggleRule(id, enabled))
 

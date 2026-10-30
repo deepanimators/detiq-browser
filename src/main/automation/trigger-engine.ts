@@ -44,16 +44,16 @@ export function toggleRule(id: string, enabled: boolean): void {
 // ── URL trigger evaluation ─────────────────────────────────────────────────
 
 function urlMatchesPattern(url: string, pattern: string): boolean {
+  // Hard-cap pattern length to prevent ReDoS on user-supplied regex
+  if (pattern.length > 300) return url.includes(pattern.slice(0, 100))
   try {
-    // Support glob-style: *.example.com, exact match, or regex /pattern/
-    if (pattern.startsWith('/') && pattern.endsWith('/')) {
+    // Custom regex: only if short and explicitly delimited
+    if (pattern.startsWith('/') && pattern.endsWith('/') && pattern.length <= 100) {
       return new RegExp(pattern.slice(1, -1)).test(url)
     }
-    // Convert glob to regex
-    const re = pattern
-      .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // escape regex chars except *
-      .replace(/\*/g, '.*')
-    return new RegExp(`^${re}$`).test(url)
+    // Glob-style: escape metacharacters first, then restore * → .*
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')
+    return new RegExp(`^${escaped}$`).test(url)
   } catch {
     return url.includes(pattern)
   }

@@ -1,6 +1,13 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { Tab } from '../layout/BrowserLayout'
 
+interface WebviewTag extends HTMLElement {
+  getWebContentsId(): number
+  getTitle(): string
+  getURL(): string
+  isReady?(): boolean
+}
+
 interface Props {
   tab: Tab
   visible: boolean
@@ -14,8 +21,18 @@ export default function WebViewArea({
   tab, visible,
   onTitleChange, onFaviconChange, onLoadingChange, onUrlChange
 }: Props) {
-  const webviewRef = useRef<Electron.WebviewTag>(null)
+  const webviewRef = useRef<WebviewTag>(null)
   const eventsAttached = useRef(false)
+
+  // Always-current refs so event listeners never capture stale callbacks
+  const onTitleChangeRef = useRef(onTitleChange)
+  const onFaviconChangeRef = useRef(onFaviconChange)
+  const onLoadingChangeRef = useRef(onLoadingChange)
+  const onUrlChangeRef = useRef(onUrlChange)
+  onTitleChangeRef.current = onTitleChange
+  onFaviconChangeRef.current = onFaviconChange
+  onLoadingChangeRef.current = onLoadingChange
+  onUrlChangeRef.current = onUrlChange
 
   const attachEvents = useCallback(() => {
     const wv = webviewRef.current
@@ -23,71 +40,73 @@ export default function WebViewArea({
     eventsAttached.current = true
 
     wv.addEventListener('page-title-updated', (e: Event) => {
-      onTitleChange(tab.id, (e as CustomEvent & { title: string }).title)
+      onTitleChangeRef.current(tab.id, (e as CustomEvent & { title: string }).title)
     })
 
     wv.addEventListener('page-favicon-updated', (e: Event) => {
       const favicons = (e as CustomEvent & { favicons: string[] }).favicons
-      if (favicons?.[0]) onFaviconChange(tab.id, favicons[0])
+      if (favicons?.[0]) onFaviconChangeRef.current(tab.id, favicons[0])
     })
 
     wv.addEventListener('did-start-loading', () => {
-      onLoadingChange(tab.id, true)
+      onLoadingChangeRef.current(tab.id, true)
     })
 
     wv.addEventListener('did-stop-loading', () => {
-      onLoadingChange(tab.id, false)
+      onLoadingChangeRef.current(tab.id, false)
+      // Sync title from webview in case page-title-updated fired before listener attached
+      try {
+        const title = wv.getTitle()
+        if (title) onTitleChangeRef.current(tab.id, title)
+        const url = wv.getURL()
+        if (url) onUrlChangeRef.current(tab.id, url)
+      } catch { /* webview destroyed */ }
     })
 
     wv.addEventListener('did-navigate', (e: Event) => {
       const url = (e as CustomEvent & { url: string }).url
-      onUrlChange(tab.id, url)
-      onLoadingChange(tab.id, false)
+      onUrlChangeRef.current(tab.id, url)
+      onLoadingChangeRef.current(tab.id, false)
       window.api?.browser.navigated?.(tab.id, url)
     })
 
     wv.addEventListener('did-navigate-in-page', (e: Event) => {
       const url = (e as CustomEvent & { url: string }).url
-      onUrlChange(tab.id, url)
+      onUrlChangeRef.current(tab.id, url)
+      window.api?.browser.navigated?.(tab.id, url)
     })
 
-    // Register this webview's webContentsId with main process for companion control
+    // Register webContentsId with main process for companion control
     try {
       const wcId = wv.getWebContentsId()
-      if (wcId > 0) {
-        window.api?.browser.registerTab?.(tab.id, wcId)
-      }
-    } catch {
-      // webview not ready yet, will retry
-    }
+      if (wcId > 0) window.api?.browser.registerTab?.(tab.id, wcId)
+    } catch { /* webview not ready yet */ }
   }, [tab.id])
 
   useEffect(() => {
     const wv = webviewRef.current
     if (!wv) return
 
-    // Wait for webview to be ready
     const onReady = () => {
       attachEvents()
-      // Re-try registration after ready
       try {
         const wcId = wv.getWebContentsId()
         if (wcId > 0) window.api?.browser.registerTab?.(tab.id, wcId)
-      } catch {}
+      } catch { /* ignore */ }
     }
 
-    if ((wv as unknown as { isReady?: () => boolean }).isReady?.()) {
+    if (wv.isReady?.()) {
       onReady()
     } else {
       wv.addEventListener('dom-ready', onReady, { once: true })
     }
 
     return () => {
+      eventsAttached.current = false
       window.api?.browser.unregisterTab?.(tab.id)
     }
   }, [attachEvents, tab.id])
 
-  // Empty tab — show blank state only when visible
   if (!tab.url) {
     return visible ? (
       <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a]">

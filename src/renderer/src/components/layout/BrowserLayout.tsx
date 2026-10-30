@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import LeftNav from './LeftNav'
 import AddressBar from '../browser/AddressBar'
 import WebViewArea from '../browser/WebViewArea'
@@ -44,12 +44,13 @@ export default function BrowserLayout() {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        setCmdOpen((v) => !v)
+        // Only open palette in browser/companion mode; home page has its own search focus
+        if (mode !== 'home') setCmdOpen((v) => !v)
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [mode])
 
   useEffect(() => {
     window.api?.companion.list().then((list) => {
@@ -158,10 +159,14 @@ export default function BrowserLayout() {
     setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, isLoading: loading } : t)))
   }, [])
 
+  // Use a ref so the callback stable reference never captures stale activeTabId
+  const activeTabIdRef = useRef(activeTabId)
+  activeTabIdRef.current = activeTabId
+
   const handleUrlChange = useCallback((tabId: string, url: string) => {
     setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, url } : t)))
-    if (tabId === activeTabId) setAddressValue(url)
-  }, [activeTabId])
+    if (tabId === activeTabIdRef.current) setAddressValue(url)
+  }, [])
 
   const isBrowser = mode === 'browser'
   const isHome = mode === 'home'
